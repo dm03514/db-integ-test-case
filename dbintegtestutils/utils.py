@@ -2,7 +2,7 @@ from ConfigParser import ConfigParser
 import json
 import os
 import unittest
-from dbintegtestutils.db_handlers import get_db_handler
+from dbintegtestutils.db_handlers import get_db_handler, SUPPORTED_DBS
 
 
 class DBIntegTestCase(unittest.TestCase):
@@ -32,18 +32,57 @@ class DBIntegTestCase(unittest.TestCase):
 
         cls.dbs_to_reset = json.loads(config.get('dbintegtests', 'reset_dbs'))
 
+        cls.config = config
+
     @classmethod
     def validate_config(cls, config):
         """
         :param config:
         :return:
         """
-        SUPPORTED_DBS = ('mysql',)
-        assert config.get('db', 'type') in SUPPORTED_DBS
+        assert config.get('db', 'type') in  SUPPORTED_DBS
 
         return config
 
+    @property
+    def fixtures_dir(self):
+        return self.config.get('dbintegtests', 'fixtures_dir')
+
+    def load_fixture(self, test_module_string):
+        """
+        Loads the appropriate test fixture for the current test.
+        Loading consists of opening a file with sql statements
+        and executing those commands against the current db.
+
+        Fixtures can be specified on the class level, which would
+        apply against every class or per test by decorating it.
+
+        All fixtures should specifiy filenames that will be loaded
+        in reference to `fixture_dirs` in the config file.
+
+        :param: test_module_string represents the current test as
+            returned by TestCase.id() method
+        :return:
+        """
+        # default to the class attribute
+        fixture_file = getattr(self, 'FIXTURE_FILE')
+
+        test_method = self._get_test_method(test_module_string)
+        if hasattr(test_method, '_integ_has_fixtures'):
+            fixture_file = test_method._integ_fixture_file
+
+        fixture = os.path.join(self.fixtures_dir, fixture_file)
+        self.db_handler.load_fixture(fixture)
+
     def setUp(self):
         self.db_handler.reset_dbs(self.dbs_to_reset)
+        self.load_fixture(self.id())
+
+    def _get_test_method(self, test_module_string):
+        """
+        Dynamically imports test method to inspect whether it is decorated
+        or not.
+        """
+        pass
 
 

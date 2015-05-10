@@ -1,6 +1,9 @@
 import MySQLdb
 
 
+SUPPORTED_DBS = ('mysql',)
+
+
 class MySQLDbTestHandler(object):
     SWITCH_DB_SQL = 'USE {}'
     TRUNCATE_TABLE_SQL = 'TRUNCATE TABLE {}'
@@ -26,19 +29,19 @@ class MySQLDbTestHandler(object):
         """
         Executes the contents of destroy_db_script against the db.
         """
-        f = open(destroy_db_script)
-        cursor = self.conn.cursor()
-        cursor.execute(f.read())
-        cursor.close()
+        self._execute_from_file(destroy_db_script)
 
     def initialize_db(self, create_db_script):
         """
         Executes the contents of create_db_script against the db.
         """
-        f = open(create_db_script)
-        cursor = self.conn.cursor()
-        cursor.execute(f.read())
-        cursor.close()
+        self._execute_from_file(create_db_script)
+
+    def load_fixture(self, fixture_path):
+        """
+        Loads the fixture_path into the db.
+        """
+        self._execute_from_file(fixture_path)
 
     def reset_dbs(self, dbs_to_reset):
         """
@@ -60,6 +63,15 @@ class MySQLDbTestHandler(object):
 
         cursor.close()
 
+    def _execute_from_file(self, file_path):
+        """
+        Executes the contents of `file_path` against the db.
+        """
+        with open(file_path) as f:
+            cursor = self.conn.cursor()
+            cursor.execute(f.read())
+            cursor.close()
+            self.conn.commit()
 
 def get_db_handler(db_conf):
     """
