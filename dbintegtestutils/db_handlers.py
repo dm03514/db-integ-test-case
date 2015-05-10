@@ -25,6 +25,9 @@ class MySQLDbTestHandler(object):
 
         self.conn = MySQLdb.connect(**conn_kwargs)
 
+    def close(self):
+        self.conn.close()
+
     def destroy_db(self, destroy_db_script):
         """
         Executes the contents of destroy_db_script against the db.

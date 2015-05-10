@@ -36,6 +36,10 @@ class DBIntegTestCase(unittest.TestCase):
         cls.config = config
 
     @classmethod
+    def tearDownClass(cls):
+        cls.db_handler.close()
+
+    @classmethod
     def validate_config(cls, config):
         """
         :param config:
