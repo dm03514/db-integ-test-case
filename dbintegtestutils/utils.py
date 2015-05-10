@@ -1,4 +1,5 @@
 from ConfigParser import ConfigParser
+import functools
 import json
 import os
 import unittest
@@ -65,11 +66,13 @@ class DBIntegTestCase(unittest.TestCase):
         :return:
         """
         # default to the class attribute
-        fixture_file = getattr(self, 'FIXTURE_FILE')
+        fixture_file = getattr(self, 'FIXTURE_FILE', None)
 
         test_method = self._get_test_method(test_module_string)
-        if hasattr(test_method, '_integ_has_fixtures'):
+        if hasattr(test_method, '_integ_fixture_file'):
             fixture_file = test_method._integ_fixture_file
+
+        assert fixture_file
 
         fixture = os.path.join(self.fixtures_dir, fixture_file)
         self.db_handler.load_fixture(fixture)
@@ -83,6 +86,23 @@ class DBIntegTestCase(unittest.TestCase):
         Dynamically imports test method to inspect whether it is decorated
         or not.
         """
-        pass
+        module_str, klass_str, method_str = test_module_string.split('.')
+        module =  __import__(module_str, fromlist=[klass_str])
+        klass = getattr(module, klass_str)
+        method = getattr(klass, method_str)
+        return method
 
 
+class load_fixture(object):
+    """
+    Attaches fixture file name to wrapped function
+
+    :param func:
+    :return:
+    """
+    def __init__(self, fixture_name):
+        self.fixture_name = fixture_name
+
+    def __call__(self, func):
+        func._integ_fixture_file = self.fixture_name
+        return func

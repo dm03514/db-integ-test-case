@@ -73,6 +73,7 @@ class MySQLDbTestHandler(object):
             cursor.close()
             self.conn.commit()
 
+
 def get_db_handler(db_conf):
     """
     Instantiates a DB wrapper object for generically interacting
