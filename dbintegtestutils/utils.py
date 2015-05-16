@@ -1,5 +1,6 @@
 from ConfigParser import ConfigParser
 import functools
+import importlib
 import json
 import os
 import unittest
@@ -19,40 +20,35 @@ class DBIntegTestCase(unittest.TestCase):
 
         :return:
         """
-        config = ConfigParser()
-        assert os.path.isfile(os.environ.get('DB_TEST_CONF_PATH'))
-        config.read(os.environ.get('DB_TEST_CONF_PATH'))
-        config = cls.validate_config(config)
+        settings_module_path = os.environ.get('DB_TEST_SETTINGS')
+        settings = importlib.import_module(settings_module_path)
 
-        cls.db_handler = get_db_handler(dict(config.items('db')))
+        settings = cls.validate_settings(settings)
 
-        cls.db_handler.destroy_db(
-            config.get('managementscripts', 'destroy_db_script'))
+        cls.db_handler = get_db_handler(settings.DATABASE)
 
-        cls.db_handler.initialize_db(
-            config.get('managementscripts', 'create_db_script'))
+        for script in settings.DESTROY_DB_SCRIPTS:
+            cls.db_handler.destroy_db(script)
 
-        cls.dbs_to_reset = json.loads(config.get('dbintegtests', 'reset_dbs'))
+        for script in settings.CREATE_DB_SCRIPTS:
+            cls.db_handler.initialize_db(script)
 
-        cls.config = config
+        cls.dbs_to_reset = settings.RESET_DBS
+
+        cls.settings = settings
 
     @classmethod
     def tearDownClass(cls):
         cls.db_handler.close()
 
     @classmethod
-    def validate_config(cls, config):
+    def validate_settings(cls, settings):
         """
-        :param config:
+        :param settings:
         :return:
         """
-        assert config.get('db', 'type') in  SUPPORTED_DBS
-
-        return config
-
-    @property
-    def fixtures_dir(self):
-        return self.config.get('dbintegtests', 'fixtures_dir')
+        assert settings.DATABASE['type'] in  SUPPORTED_DBS
+        return settings
 
     def load_fixtures(self, test_module_string):
         """
@@ -80,7 +76,7 @@ class DBIntegTestCase(unittest.TestCase):
 
         # make sure to load fixtures in order they were presented
         for fixture_file in fixture_files:
-            fixture = os.path.join(self.fixtures_dir, fixture_file)
+            fixture = os.path.join(self.settings.FIXTURES_DIR, fixture_file)
             self.db_handler.load_fixture(fixture)
 
     def setUp(self):
