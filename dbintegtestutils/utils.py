@@ -20,6 +20,7 @@ class DBIntegTestCase(unittest.TestCase):
         :return:
         """
         config = ConfigParser()
+        assert os.path.isfile(os.environ.get('DB_TEST_CONF_PATH'))
         config.read(os.environ.get('DB_TEST_CONF_PATH'))
         config = cls.validate_config(config)
 
@@ -70,16 +71,17 @@ class DBIntegTestCase(unittest.TestCase):
         :return:
         """
         # default to the class attribute
-        fixture_file = getattr(self, 'FIXTURE_FILE', None)
-
+        fixture_files = getattr(self, 'FIXTURE_FILES', [])
         test_method = self._get_test_method(test_module_string)
         if hasattr(test_method, '_integ_fixture_file'):
-            fixture_file = test_method._integ_fixture_file
+            fixture_files.append(test_method._integ_fixture_file)
 
-        assert fixture_file
+        assert fixture_files
 
-        fixture = os.path.join(self.fixtures_dir, fixture_file)
-        self.db_handler.load_fixture(fixture)
+        # make sure to load fixtures in order they were presented
+        for fixture_file in fixture_files:
+            fixture = os.path.join(self.fixtures_dir, fixture_file)
+            self.db_handler.load_fixture(fixture)
 
     def setUp(self):
         self.db_handler.reset_dbs(self.dbs_to_reset)
@@ -90,7 +92,10 @@ class DBIntegTestCase(unittest.TestCase):
         Dynamically imports test method to inspect whether it is decorated
         or not.
         """
-        module_str, klass_str, method_str = test_module_string.split('.')
+        package_list = test_module_string.split('.')
+        method_str = package_list.pop()
+        klass_str = package_list.pop()
+        module_str = '.'.join(package_list)
         module =  __import__(module_str, fromlist=[klass_str])
         klass = getattr(module, klass_str)
         method = getattr(klass, method_str)
