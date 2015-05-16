@@ -1,7 +1,4 @@
-from ConfigParser import ConfigParser
-import functools
 import importlib
-import json
 import os
 import unittest
 from dbintegtestutils.db_handlers import get_db_handler, SUPPORTED_DBS
@@ -15,8 +12,6 @@ class DBIntegTestCase(unittest.TestCase):
     def setUpClass(cls):
         """
         Initialized db integ test by:
-        - parsevalidating config
-        - executing create db command
 
         :return:
         """
