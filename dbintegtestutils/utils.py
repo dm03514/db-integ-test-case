@@ -54,10 +54,10 @@ class DBIntegTestCase(unittest.TestCase):
     def fixtures_dir(self):
         return self.config.get('dbintegtests', 'fixtures_dir')
 
-    def load_fixture(self, test_module_string):
+    def load_fixtures(self, test_module_string):
         """
-        Loads the appropriate test fixture for the current test.
-        Loading consists of opening a file with sql statements
+        Loads the appropriate test fixtures for the current test.
+        Loading consists of opening all files with sql statements
         and executing those commands against the current db.
 
         Fixtures can be specified on the class level, which would
@@ -85,7 +85,7 @@ class DBIntegTestCase(unittest.TestCase):
 
     def setUp(self):
         self.db_handler.reset_dbs(self.dbs_to_reset)
-        self.load_fixture(self.id())
+        self.load_fixtures(self.id())
 
     def _get_test_method(self, test_module_string):
         """
