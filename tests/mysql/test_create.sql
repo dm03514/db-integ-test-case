@@ -1,0 +1,8 @@
+CREATE DATABASE integtests;
+
+USE integtests;
+
+CREATE TABLE example (
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  data VARCHAR(100)
+);

@@ -2,6 +2,3 @@
 settings_local.cfg
 dbintegtestutils.egg-info/
 *.pyc
-test_create.sql
-test_destroy.sql
-fixtures/

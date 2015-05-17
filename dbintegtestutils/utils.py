@@ -1,6 +1,4 @@
-from ConfigParser import ConfigParser
-import functools
-import json
+import importlib
 import os
 import unittest
 from dbintegtestutils.db_handlers import get_db_handler, SUPPORTED_DBS
@@ -14,49 +12,43 @@ class DBIntegTestCase(unittest.TestCase):
     def setUpClass(cls):
         """
         Initialized db integ test by:
-        - parsevalidating config
-        - executing create db command
 
         :return:
         """
-        config = ConfigParser()
-        config.read(os.environ.get('DB_TEST_CONF_PATH'))
-        config = cls.validate_config(config)
+        settings_module_path = os.environ.get('DB_TEST_SETTINGS')
+        settings = importlib.import_module(settings_module_path)
 
-        cls.db_handler = get_db_handler(dict(config.items('db')))
+        settings = cls.validate_settings(settings)
 
-        cls.db_handler.destroy_db(
-            config.get('managementscripts', 'destroy_db_script'))
+        cls.db_handler = get_db_handler(settings.DATABASE)
 
-        cls.db_handler.initialize_db(
-            config.get('managementscripts', 'create_db_script'))
+        for script in settings.DESTROY_DB_SCRIPTS:
+            cls.db_handler.destroy_db(script)
 
-        cls.dbs_to_reset = json.loads(config.get('dbintegtests', 'reset_dbs'))
+        for script in settings.CREATE_DB_SCRIPTS:
+            cls.db_handler.initialize_db(script)
 
-        cls.config = config
+        cls.dbs_to_reset = settings.RESET_DBS
+
+        cls.settings = settings
 
     @classmethod
     def tearDownClass(cls):
         cls.db_handler.close()
 
     @classmethod
-    def validate_config(cls, config):
+    def validate_settings(cls, settings):
         """
-        :param config:
+        :param settings:
         :return:
         """
-        assert config.get('db', 'type') in  SUPPORTED_DBS
+        assert settings.DATABASE['type'] in  SUPPORTED_DBS
+        return settings
 
-        return config
-
-    @property
-    def fixtures_dir(self):
-        return self.config.get('dbintegtests', 'fixtures_dir')
-
-    def load_fixture(self, test_module_string):
+    def load_fixtures(self, test_module_string):
         """
-        Loads the appropriate test fixture for the current test.
-        Loading consists of opening a file with sql statements
+        Loads the appropriate test fixtures for the current test.
+        Loading consists of opening all files with sql statements
         and executing those commands against the current db.
 
         Fixtures can be specified on the class level, which would
@@ -70,27 +62,31 @@ class DBIntegTestCase(unittest.TestCase):
         :return:
         """
         # default to the class attribute
-        fixture_file = getattr(self, 'FIXTURE_FILE', None)
-
+        fixture_files = getattr(self, 'FIXTURE_FILES', [])
         test_method = self._get_test_method(test_module_string)
         if hasattr(test_method, '_integ_fixture_file'):
-            fixture_file = test_method._integ_fixture_file
+            fixture_files.append(test_method._integ_fixture_file)
 
-        assert fixture_file
+        assert fixture_files
 
-        fixture = os.path.join(self.fixtures_dir, fixture_file)
-        self.db_handler.load_fixture(fixture)
+        # make sure to load fixtures in order they were presented
+        for fixture_file in fixture_files:
+            fixture = os.path.join(self.settings.FIXTURES_DIR, fixture_file)
+            self.db_handler.load_fixture(fixture)
 
     def setUp(self):
         self.db_handler.reset_dbs(self.dbs_to_reset)
-        self.load_fixture(self.id())
+        self.load_fixtures(self.id())
 
     def _get_test_method(self, test_module_string):
         """
         Dynamically imports test method to inspect whether it is decorated
         or not.
         """
-        module_str, klass_str, method_str = test_module_string.split('.')
+        package_list = test_module_string.split('.')
+        method_str = package_list.pop()
+        klass_str = package_list.pop()
+        module_str = '.'.join(package_list)
         module =  __import__(module_str, fromlist=[klass_str])
         klass = getattr(module, klass_str)
         method = getattr(klass, method_str)
