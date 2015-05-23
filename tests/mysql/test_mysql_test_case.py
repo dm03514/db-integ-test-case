@@ -10,7 +10,7 @@ class TestMultipleFixtureFiles(DBIntegTestCase):
         'test2.sql'
     ]
 
-    def test_load_single_fixture(self):
+    def test_load_multiple_fixtures(self):
         cursor = self.db_handler.conn.cursor()
         cursor.execute('SELECT * from integtests.example')
         rows = cursor.fetchall()
