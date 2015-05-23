@@ -60,7 +60,8 @@ To run the projects unittests:
 
 1. start local mysql server (make sure there is a root/root user with all permissions)
 2. `pip install -r requirements.txt`
-3. `DB_TEST_SETTINGS=tests.mysql.settings_test python -m unittest discover`
+3. `python setup.py develop`
+4. `DB_TEST_SETTINGS=tests.mysql.settings_test python -m unittest discover`
 
 The framework provides a `@load_fixture` decorator, which allows an individual
 test to specify a single fixture to load in addition to `FIXTURE_FILES`
